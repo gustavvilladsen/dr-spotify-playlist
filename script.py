@@ -8,60 +8,26 @@ from spotipy.oauth2 import SpotifyOAuth
 import os
 
 
+import requests
+
 def fetch_dr():
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
+    url = "https://www.dr.dk/mu-online/api/1.4/playlist/get?channel=p3"
 
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    res = requests.get(url)
+    data = res.json()
 
-    driver = webdriver.Chrome(options=options)
-    wait = WebDriverWait(driver, 20)
+    tracks = []
 
-    driver.get("https://www.dr.dk/lyd/p3/playlister")
+    for item in data.get("playlist", []):
+        artist = item.get("primaryArtist")
+        title = item.get("title")
 
-    # 🔥 Vent på at noget overhovedet loader
-    wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        if artist and title:
+            tracks.append((artist, title))
 
-    time.sleep(5)  # ekstra buffer
+    print(f"Fundet {len(tracks)} tracks fra API")
 
-    data = []
-
-    # 🔥 Scroll (vigtigt for lazy loading)
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(3)
-
-    buttons = driver.find_elements(By.TAG_NAME, "button")
-
-    print(f"Fundet {len(buttons)} knapper")
-
-    for b in buttons[:10]:  # begræns
-        try:
-            driver.execute_script("arguments[0].click();", b)
-            time.sleep(3)
-
-            rows = driver.find_elements(By.CSS_SELECTOR, "[data-testid='playlist-track']")
-
-            print(f"Tracks fundet i klik: {len(rows)}")
-
-            for r in rows:
-                text = r.text.strip()
-
-                if " - " in text:
-                    artist, title = text.split(" - ", 1)
-                    data.append((artist, title))
-
-        except Exception as e:
-            print("Fejl ved klik:", e)
-            continue
-
-    driver.quit()
-
-    print(f"Fundet {len(data)} tracks TOTAL")
-
-    return pd.DataFrame(data, columns=["artist", "title"])
+    return pd.DataFrame(tracks, columns=["artist", "title"])
 
 def filter_songs(df):
     counts = df.groupby(["artist", "title"]).size().reset_index(name="count")
