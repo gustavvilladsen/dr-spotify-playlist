@@ -1,31 +1,27 @@
-name: Run DR script
+name: Run DR P3 Spotify playlist
 
 on:
   schedule:
-    - cron: '0 8 * * 1'  # hver mandag kl 08
-  workflow_dispatch:
+    - cron: '0 8 * * 1'  # Hver mandag kl. 08:00 UTC
+  workflow_dispatch:      # Kan også køres manuelt
 
 jobs:
   run:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@v1
-
-      - name: Install Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install deps
-        run: |
-          pip install selenium pandas spotipy
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 pandas spotipy
 
       - name: Run script
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
         run: python script.py
