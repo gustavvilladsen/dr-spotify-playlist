@@ -9,49 +9,57 @@ import os
 
 
 def fetch_dr():
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
     driver = webdriver.Chrome(options=options)
+    wait = WebDriverWait(driver, 20)
 
     driver.get("https://www.dr.dk/lyd/p3/playlister")
-    time.sleep(8)
+
+    # 🔥 Vent på at noget overhovedet loader
+    wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+
+    time.sleep(5)  # ekstra buffer
 
     data = []
 
-    buttons = driver.find_elements(By.CSS_SELECTOR, "button")
+    # 🔥 Scroll (vigtigt for lazy loading)
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(3)
 
-    clicked = 0
+    buttons = driver.find_elements(By.TAG_NAME, "button")
 
-    for b in buttons:
-        label = b.text.strip()
+    print(f"Fundet {len(buttons)} knapper")
 
-        if "." in label or "-" in label:
+    for b in buttons[:10]:  # begræns
+        try:
             driver.execute_script("arguments[0].click();", b)
-            time.sleep(5)
+            time.sleep(3)
 
-            # 🔥 VIGTIG: mere præcis selector
             rows = driver.find_elements(By.CSS_SELECTOR, "[data-testid='playlist-track']")
 
+            print(f"Tracks fundet i klik: {len(rows)}")
+
             for r in rows:
-                try:
-                    text = r.text.strip()
+                text = r.text.strip()
 
-                    if " - " in text:
-                        artist, title = text.split(" - ", 1)
-                        data.append((artist, title))
-                except:
-                    continue
+                if " - " in text:
+                    artist, title = text.split(" - ", 1)
+                    data.append((artist, title))
 
-            clicked += 1
-            if clicked >= 5:
-                break
+        except Exception as e:
+            print("Fejl ved klik:", e)
+            continue
 
     driver.quit()
 
-    print(f"Fundet {len(data)} tracks")
+    print(f"Fundet {len(data)} tracks TOTAL")
 
     return pd.DataFrame(data, columns=["artist", "title"])
 
