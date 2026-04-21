@@ -17,7 +17,7 @@ def fetch_dr():
     driver = webdriver.Chrome(options=options)
 
     driver.get("https://www.dr.dk/lyd/p3/playlister")
-    time.sleep(5)
+    time.sleep(8)
 
     data = []
 
@@ -30,27 +30,30 @@ def fetch_dr():
 
         if "." in label or "-" in label:
             driver.execute_script("arguments[0].click();", b)
-            time.sleep(3)
+            time.sleep(5)
 
-            items = driver.find_elements(By.CSS_SELECTOR, "li")
+            # 🔥 VIGTIG: mere præcis selector
+            rows = driver.find_elements(By.CSS_SELECTOR, "[data-testid='playlist-track']")
 
-            for i in items:
-                text = i.text.strip()
+            for r in rows:
+                try:
+                    text = r.text.strip()
 
-                if " - " in text:
-                    try:
+                    if " - " in text:
                         artist, title = text.split(" - ", 1)
                         data.append((artist, title))
-                    except:
-                        pass
+                except:
+                    continue
 
             clicked += 1
             if clicked >= 5:
                 break
 
     driver.quit()
-    return pd.DataFrame(data, columns=["artist", "title"])
 
+    print(f"Fundet {len(data)} tracks")
+
+    return pd.DataFrame(data, columns=["artist", "title"])
 
 def filter_songs(df):
     counts = df.groupby(["artist", "title"]).size().reset_index(name="count")
